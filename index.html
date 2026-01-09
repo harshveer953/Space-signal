@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPACE SIGNAL RECEIVER</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000;
+      color: #0ff;
+      font-family: 'Courier New', monospace;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    .noise {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="3" /></filter><rect width="200" height="200" filter="url(%23n)" opacity="0.05"/></svg>');
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.3;
+      animation: noiseAnim 0.2s infinite;
+    }
+
+    @keyframes noiseAnim {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-5%, -5%); }
+      20% { transform: translate(-10%, 5%); }
+      30% { transform: translate(5%, -10%); }
+      40% { transform: translate(-5%, 15%); }
+      50% { transform: translate(-10%, 5%); }
+      60% { transform: translate(15%, 0); }
+      70% { transform: translate(0, 10%); }
+      80% { transform: translate(-15%, 0); }
+      90% { transform: translate(10%, 5%); }
+    }
+
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 255, 255, 0.02) 51%
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 999;
+      animation: scan 8s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(100vh); }
+    }
+
+    .grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      min-height: 500vh;
+    }
+
+    section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 2rem;
+      position: relative;
+    }
+
+    .glitch {
+      animation: glitch 3s infinite;
+    }
+
+    @keyframes glitch {
+      0%, 90%, 100% { transform: translate(0); }
+      91% { transform: translate(-2px, 2px); }
+      92% { transform: translate(2px, -2px); }
+      93% { transform: translate(-2px, 2px); }
+      94% { transform: translate(2px, -2px); }
+    }
+
+    .hero {
+      text-align: center;
+    }
+
+    .system-text {
+      font-size: clamp(1rem, 3vw, 1.5rem);
+      letter-spacing: 0.3em;
+      opacity: 0.7;
+      margin-bottom: 2rem;
+      animation: flicker 4s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 0.4; }
+      51% { opacity: 0.9; }
+      52% { opacity: 0.5; }
+      53% { opacity: 0.8; }
+    }
+
+    .signal-title {
+      font-size: clamp(3rem, 10vw, 8rem);
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+      margin-bottom: 1rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
+      50% { opacity: 0.8; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+    }
+
+    .frequency {
+      font-size: clamp(2rem, 6vw, 4rem);
+      color: #0f0;
+      margin: 2rem 0;
+      font-weight: bold;
+      text-shadow: 0 0 10px #0f0;
+      transition: all 0.3s ease;
+    }
+
+    .origin {
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #f00;
+      letter-spacing: 0.2em;
+      animation: flicker 2s infinite;
+    }
+
+    .pulse-indicator {
+      width: 20px;
+      height: 20px;
+      background: #0ff;
+      border-radius: 50%;
+      margin: 2rem auto;
+      box-shadow: 0 0 20px #0ff, 0 0 40px #0ff, 0 0 60px #0ff;
+      animation: pulseDot 1.5s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.5; }
+    }
+
+    .terminal {
+      width: 90%;
+      max-width: 800px;
+      height: 400px;
+      background: rgba(0, 20, 20, 0.8);
+      border: 1px solid #0ff;
+      padding: 1rem;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
+    }
+
+    .terminal::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terminal::-webkit-scrollbar-track {
+      background: rgba(0, 255, 255, 0.1);
+    }
+
+    .terminal::-webkit-scrollbar-thumb {
+      background: #0ff;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    .log-entry {
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    .log-entry.old {
+      animation: fadeOut 2s forwards;
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0.3; }
+    }
+
+    .waveform {
+      width: 90%;
+      max-width: 1000px;
+      height: 300px;
+      position: relative;
+      border: 1px solid #0ff;
+      background: rgba(0, 20, 20, 0.5);
+      overflow: hidden;
+    }
+
+    .wave-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: #0ff;
+      box-shadow: 0 0 10px #0ff;
+      transform-origin: left center;
+    }
+
+    .coordinates {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      width: 90%;
+      max-width: 1200px;
+    }
+
+    .coord-box {
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      padding: 2rem;
+      background: rgba(0, 20, 20, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .coord-box:hover {
+      border-color: #0ff;
+      background: rgba(0, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      transform: translateY(-5px);
+    }
+
+    .coord-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #0ff;
+    }
+
+    .coord-data {
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.5s ease;
+      color: #0f0;
+      font-size: 0.9rem;
+    }
+
+    .coord-box:hover .coord-data {
+      opacity: 1;
+      max-height: 200px;
+    }
+
+    .signal-lost {
+      text-align: center;
+      animation: fadeOut 5s forwards;
+    }
+
+    .idle-warning {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 0, 0.1);
+      border: 2px solid #f00;
+      padding: 2rem;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      animation: flicker 1s infinite;
+    }
+
+    .idle-warning.active {
+      opacity: 1;
+    }
+
+    .distortion {
+      filter: blur(5px);
+      transform: skew(2deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="scanline"></div>
+  <div class="grid"></div>
+
+  <div class="idle-warning" id="idleWarning">
+    <div style="font-size: 2rem; color: #f00; margin-bottom: 1rem;">⚠ IDLE DETECTED</div>
+    <div>SIGNAL DEGRADATION IN PROGRESS</div>
+  </div>
+
+  <div class="container" id="container">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="system-text glitch">DEEP SPACE MONITORING SYSTEM</div>
+      <div class="signal-title">SIGNAL DETECTED</div>
+      <div class="frequency" id="frequency">1420.405 MHz</div>
+      <div class="origin">ORIGIN: UNKNOWN</div>
+      <div class="pulse-indicator"></div>
+      <div style="margin-top: 2rem; opacity: 0.5; font-size: 0.8rem;">SCROLL TO TUNE FREQUENCY</div>
+    </section>
+
+    <!-- TERMINAL -->
+    <section>
+      <div class="system-text" style="margin-bottom: 2rem;">DATA STREAM INCOMING</div>
+      <div class="terminal" id="terminal"></div>
+    </section>
+
+    <!-- WAVEFORM -->
+    <section>
+      <div class="system-text" style="margin-bottom: 2rem;">SIGNAL ANALYSIS</div>
+      <div class="waveform" id="waveform"></div>
+    </section>
+
+    <!-- COORDINATES -->
+    <section>
+      <div class="system-text" style="margin-bottom: 2rem;">COORDINATE ANALYSIS</div>
+      <div class="coordinates">
+        <div class="coord-box">
+          <div class="coord-title">SECTOR: α-4729</div>
+          <div class="coord-data">
+            RA: 14h 29m 42.9s<br>
+            DEC: +62° 40' 46"<br>
+            DISTANCE: 2.537 x 10⁹ ly<br>
+            STATUS: ACTIVE
+          </div>
+        </div>
+        <div class="coord-box">
+          <div class="coord-title">SECTOR: β-8312</div>
+          <div class="coord-data">
+            RA: 03h 19m 48.2s<br>
+            DEC: -41° 20' 33"<br>
+            DISTANCE: 4.921 x 10⁹ ly<br>
+            STATUS: INTERMITTENT
+          </div>
+        </div>
+        <div class="coord-box">
+          <div class="coord-title">SECTOR: γ-1156</div>
+          <div class="coord-data">
+            RA: 22h 57m 39.1s<br>
+            DEC: +20° 46' 08"<br>
+            DISTANCE: 1.483 x 10⁹ ly<br>
+            STATUS: DEGRADED
+          </div>
+        </div>
+        <div class="coord-box">
+          <div class="coord-title">SECTOR: δ-9047</div>
+          <div class="coord-data">
+            RA: 18h 36m 56.3s<br>
+            DEC: -13° 49' 42"<br>
+            DISTANCE: 3.762 x 10⁹ ly<br>
+            STATUS: ANOMALOUS
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIGNAL LOST -->
+    <section class="signal-lost">
+      <div class="signal-title" style="color: #f00;">SIGNAL LOST</div>
+      <div style="margin-top: 2rem; opacity: 0.5;">CONNECTION TERMINATED</div>
+      <div style="margin-top: 1rem; opacity: 0.3; font-size: 0.8rem;">...</div>
+    </section>
+  </div>
+
+  <script>
+    const freqEl = document.getElementById('frequency');
+    const terminal = document.getElementById('terminal');
+    const waveform = document.getElementById('waveform');
+    const container = document.getElementById('container');
+    const idleWarning = document.getElementById('idleWarning');
+
+    let baseFreq = 1420.405;
+    let scrollSpeed = 0;
+    let lastScroll = Date.now();
+    let idleTimer;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    // Scroll handling
+    let lastScrollTop = 0;
+    window.addEventListener('scroll', () => {
+      const st = window.pageYOffset;
+      scrollSpeed = Math.abs(st - lastScrollTop);
+      lastScrollTop = st;
+
+      // Update frequency based on scroll position
+      const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+      const newFreq = baseFreq + (scrollPercent * 200 - 100);
+      freqEl.textContent = newFreq.toFixed(3) + ' MHz';
+
+      // Distortion effect on fast scroll
+      if (scrollSpeed > 50) {
+        container.classList.add('distortion');
+        setTimeout(() => container.classList.remove('distortion'), 100);
+      }
+
+      // Reset idle timer
+      clearTimeout(idleTimer);
+      idleWarning.classList.remove('active');
+      idleTimer = setTimeout(() => {
+        idleWarning.classList.add('active');
+      }, 8000);
+
+      lastScroll = Date.now();
+    });
+
+    // Terminal logs
+    const logMessages = [
+      '[SYS] Scanning frequency spectrum...',
+      '[DATA] Pattern detected at 1420.405 MHz',
+      '[WARN] Non-terrestrial origin confirmed',
+      '[SYS] Attempting signal lock...',
+      '[DATA] Binary sequence identified',
+      '[INFO] Signal strength: 78%',
+      '[WARN] Unknown encoding detected',
+      '[SYS] Decryption in progress...',
+      '[DATA] Partial decode: 01001000 01000101 01001100...',
+      '[ERROR] Signal interference detected',
+      '[SYS] Compensating for drift...',
+      '[INFO] Message length: 2847 bytes',
+      '[WARN] Transmission origin: 2.5 billion light years',
+      '[DATA] Repeating pattern found',
+      '[SYS] Analysis complete',
+      '[CRITICAL] This is not a natural signal'
+    ];
+
+    let logIndex = 0;
+    function addLog() {
+      if (logIndex >= logMessages.length) {
+        logIndex = 0;
+        // Mark old logs
+        const entries = terminal.querySelectorAll('.log-entry');
+        entries.forEach((e, i) => {
+          if (i < entries.length - 5) e.classList.add('old');
+        });
+      }
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${new Date().toISOString().substr(11, 8)}] ${logMessages[logIndex]}`;
+      terminal.appendChild(entry);
+      terminal.scrollTop = terminal.scrollHeight;
+      logIndex++;
+
+      setTimeout(addLog, Math.random() * 3000 + 2000);
+    }
+
+    addLog();
+
+    // Waveform visualization
+    for (let i = 0; i < 8; i++) {
+      const line = document.createElement('div');
+      line.className = 'wave-line';
+      line.style.top = `${i * 40 + 20}px`;
+      waveform.appendChild(line);
+    }
+
+    function animateWaves() {
+      const lines = waveform.querySelectorAll('.wave-line');
+      const time = Date.now() * 0.001;
+      
+      lines.forEach((line, i) => {
+        const offset = Math.sin(time + i * 0.5 + mouseX * 0.01) * 20;
+        const scaleX = 1 + Math.sin(time * 2 + i) * 0.1 + mouseY * 0.0001;
+        line.style.transform = `translateY(${offset}px) scaleX(${scaleX})`;
+        
+        const opacity = 0.3 + Math.sin(time + i) * 0.3;
+        line.style.opacity = opacity;
+      });
+
+      requestAnimationFrame(animateWaves);
+    }
+
+    animateWaves();
+
+    // Mouse tracking for waveform
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    // Initialize idle timer
+    idleTimer = setTimeout(() => {
+      idleWarning.classList.add('active');
+    }, 8000);
+  </script>
+</body>
+</html>
